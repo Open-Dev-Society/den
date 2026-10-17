@@ -1,0 +1,494 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Brain</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230071e3' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='6' cy='7' r='2.2'/%3E%3Ccircle cx='18' cy='7' r='2.2'/%3E%3Ccircle cx='12' cy='17.5' r='2.2'/%3E%3Cpath d='M8.2 7h7.6M7.1 9l3.8 6.6M16.9 9l-3.8 6.6'/%3E%3C/svg%3E">
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #ffffff;
+    --sidebar: #f3f3f5;
+    --panel: #fafafb;
+    --fill: rgba(0, 0, 0, 0.045);
+    --fill-2: rgba(0, 0, 0, 0.085);
+    --line: rgba(0, 0, 0, 0.09);
+    --text: #1d1d1f;
+    --text-2: #6e6e73;
+    --accent: #0071e3;
+    --on-accent: #ffffff;
+    --t-orange: #d9653b;
+    --t-blue: #0a7aff;
+    --t-purple: #8a5cf6;
+    --t-gray: #6e6e73;
+    --ease: cubic-bezier(0.25, 0.1, 0.25, 1);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1c1e;
+      --sidebar: #232325;
+      --panel: #19191b;
+      --fill: rgba(255, 255, 255, 0.06);
+      --fill-2: rgba(255, 255, 255, 0.1);
+      --line: rgba(255, 255, 255, 0.08);
+      --text: #f5f5f7;
+      --text-2: #a1a1a6;
+      --accent: #0a84ff;
+      --t-orange: #ff8a5c;
+      --t-blue: #4aa3ff;
+      --t-purple: #b18cff;
+      --t-gray: #a1a1a6;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font: 13px/1.4 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+    color: var(--text);
+    background: var(--bg);
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+  button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: default; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  svg { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+  pre, .mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px; }
+
+  .app { display: grid; grid-template-columns: 224px minmax(0, 1fr) minmax(320px, 400px); height: 100vh; }
+
+  /* sidebar */
+  .sidebar { background: var(--sidebar); border-right: 1px solid var(--line); padding: 14px 10px; overflow-y: auto; }
+  .brand { display: flex; align-items: center; gap: 8px; font-weight: 600; padding: 4px 8px 6px; }
+  .brand svg { color: var(--accent); }
+  .side-label { font-size: 11px; font-weight: 600; color: var(--text-2); padding: 16px 8px 4px; }
+  .side-item {
+    display: flex; align-items: center; gap: 8px; width: 100%; height: 30px; padding: 0 8px;
+    border-radius: 7px; text-align: left; transition: background 0.15s var(--ease);
+  }
+  .side-item:hover { background: var(--fill); }
+  .side-item[aria-current="true"] { background: var(--fill-2); font-weight: 500; }
+  .side-item .n { margin-left: auto; color: var(--text-2); font-size: 11px; font-weight: 400; font-variant-numeric: tabular-nums; }
+  .side-icon { display: grid; place-items: center; width: 18px; color: var(--tint, var(--accent)); }
+
+  /* toolbar */
+  main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+  .toolbar {
+    display: flex; align-items: center; flex-wrap: wrap; gap: 10px 12px;
+    min-height: 52px; padding: 10px 16px; border-bottom: 1px solid var(--line);
+  }
+  .scope { display: flex; align-items: baseline; gap: 8px; margin-right: auto; min-width: 0; }
+  .scope h1 { font-size: 15px; font-weight: 600; margin: 0; white-space: nowrap; }
+  #count { color: var(--text-2); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .segmented { display: flex; padding: 2px; border-radius: 8px; background: var(--fill); }
+  .segmented button {
+    padding: 3px 10px; border-radius: 6px; color: var(--text-2); font-size: 12px;
+    transition: background 0.15s var(--ease), color 0.15s var(--ease);
+  }
+  .segmented button[aria-selected="true"] { background: var(--bg); color: var(--text); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.14); }
+  .search {
+    display: flex; align-items: center; gap: 6px; width: 240px; height: 30px; padding: 0 10px;
+    border-radius: 8px; background: var(--fill); color: var(--text-2);
+    transition: box-shadow 0.15s var(--ease), background 0.15s var(--ease);
+  }
+  .search:focus-within { background: var(--bg); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent); }
+  .search input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; font: inherit; color: var(--text); }
+
+  /* list */
+  .list { flex: 1; overflow-y: auto; padding: 0 8px 16px; outline: none; }
+  .group {
+    position: sticky; top: 0; z-index: 1; padding: 12px 10px 6px;
+    font-size: 11px; font-weight: 600; color: var(--text-2);
+    background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(12px);
+  }
+  .row {
+    display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; align-items: center; gap: 10px;
+    height: 46px; padding: 0 10px; border-radius: 8px; scroll-margin: 36px 0 8px;
+  }
+  .row:hover { background: var(--fill); }
+  .row[aria-selected="true"] { background: var(--accent); color: var(--on-accent); }
+  .row[aria-selected="true"] .row-sub,
+  .row[aria-selected="true"] .row-time { color: color-mix(in srgb, var(--on-accent) 82%, transparent); }
+  .row[aria-selected="true"] .tile { background: rgba(255, 255, 255, 0.22); color: #fff; }
+  .row-title, .row-sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .row-title { font-weight: 500; }
+  .row-sub { font-size: 11.5px; color: var(--text-2); margin-top: 1px; }
+  .row-time { font-size: 11.5px; color: var(--text-2); font-variant-numeric: tabular-nums; }
+  .tile {
+    display: grid; place-items: center; width: var(--size); height: var(--size);
+    border-radius: calc(var(--size) * 0.26); color: var(--tint);
+    background: color-mix(in srgb, var(--tint) 14%, transparent);
+  }
+
+  /* preview */
+  .preview { background: var(--panel); border-left: 1px solid var(--line); overflow-y: auto; padding: 24px; }
+  .empty { height: 100%; display: grid; place-content: center; justify-items: center; gap: 10px; padding: 48px 24px; color: var(--text-2); text-align: center; }
+  .empty p { margin: 0; }
+  .card-in { animation: in 0.18s var(--ease); }
+  @keyframes in { from { opacity: 0; transform: translateY(4px); } }
+  .p-head { display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: 14px; align-items: start; }
+  .p-head h2 {
+    font-size: 17px; line-height: 1.3; font-weight: 600; margin: 2px 0 4px; overflow-wrap: anywhere;
+    display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .p-sub { margin: 0; color: var(--text-2); }
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 14px;
+    border-radius: 980px; background: var(--fill); font-weight: 500;
+    transition: background 0.15s var(--ease), filter 0.15s var(--ease);
+  }
+  .btn:hover { background: var(--fill-2); }
+  .btn.primary { background: var(--accent); color: var(--on-accent); }
+  .btn.primary:hover { filter: brightness(1.08); }
+  .facts {
+    display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 6px 12px;
+    margin: 0 0 18px; padding: 14px 0; border-block: 1px solid var(--line);
+  }
+  .facts dt { color: var(--text-2); }
+  .facts dd { margin: 0; overflow-wrap: anywhere; }
+  .body {
+    font-family: inherit; font-size: 13.5px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere;
+    margin: 0 0 20px; padding: 14px; border-radius: 10px; background: var(--bg); border: 1px solid var(--line);
+    max-height: 50vh; overflow-y: auto;
+  }
+  .body.mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12.5px; }
+  .section-label { display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; color: var(--text-2); margin: 0 0 6px; }
+  .mini {
+    display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; align-items: center; gap: 8px;
+    width: 100%; height: 32px; padding: 0 8px; border-radius: 7px; text-align: left;
+  }
+  .mini:hover { background: var(--fill); }
+  .mini.current { background: var(--fill-2); font-weight: 500; }
+  .mini-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mini time { color: var(--text-2); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+  .raw { margin-top: 18px; }
+  .raw summary { font-size: 11px; font-weight: 600; color: var(--text-2); padding: 4px 0; }
+  .raw pre {
+    white-space: pre-wrap; overflow-wrap: anywhere; color: var(--text-2); margin: 6px 0 0; padding: 12px;
+    border-radius: 10px; background: var(--bg); border: 1px solid var(--line); max-height: 40vh; overflow: auto;
+  }
+
+  @media (max-width: 1100px) {
+    .app { grid-template-columns: 200px minmax(0, 1fr) 320px; }
+    .search { width: 180px; }
+  }
+  @media (max-width: 760px) {
+    .sidebar { display: none; }
+    .app { grid-template-columns: minmax(0, 1fr) 300px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar" id="sidebar" aria-label="Sources"></aside>
+  <main>
+    <header class="toolbar">
+      <div class="scope"><h1 id="scope">Everything</h1><span id="count"></span></div>
+      <div class="segmented" id="ranges" role="tablist" aria-label="Time range"></div>
+      <label class="search" id="search-box">
+        <input id="q" type="search" placeholder="Search your brain" autocomplete="off" spellcheck="false" aria-label="Search">
+      </label>
+    </header>
+    <div class="list" id="list" role="listbox" tabindex="0" aria-label="Items"><div id="sentinel"></div></div>
+  </main>
+  <section class="preview" id="preview" aria-live="polite"></section>
+</div>
+
+<script>
+const PAGE = 100;
+const SOURCES = {
+  "claude-code": { label: "Claude", icon: "sparkle", tint: "var(--t-orange)" },
+  browser: { label: "Web", icon: "globe", tint: "var(--t-blue)" },
+  git: { label: "Commits", icon: "branch", tint: "var(--t-purple)" },
+  zsh: { label: "Terminal", icon: "terminal", tint: "var(--t-gray)" },
+};
+const KINDS = { prompt: "Your prompt", reply: "Claude’s reply", visit: "Page visit", commit: "Commit", command: "Shell command" };
+const RANGES = [["all", "Any time"], ["today", "Today"], ["yesterday", "Yesterday"], ["week", "7 days"], ["month", "30 days"]];
+const ICONS = {
+  brain: '<circle cx="6" cy="7" r="2.2"/><circle cx="18" cy="7" r="2.2"/><circle cx="12" cy="17.5" r="2.2"/><path d="M8.2 7h7.6M7.1 9l3.8 6.6M16.9 9l-3.8 6.6"/>',
+  tray: '<path d="M4 13h4l1.5 2.5h5L16 13h4"/><path d="M5.5 5.5h13L20 13v5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18v-5z"/>',
+  sparkle: '<path d="M12 4c.7 4.6 2.4 7.3 8 8-5.6.7-7.3 3.4-8 8-.7-4.6-2.4-7.3-8-8 5.6-.7 7.3-3.4 8-8z"/>',
+  globe: '<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.4 2.4 3.6 5.2 3.6 8.5s-1.2 6.1-3.6 8.5c-2.4-2.4-3.6-5.2-3.6-8.5s1.2-6.1 3.6-8.5z"/>',
+  branch: '<circle cx="7" cy="6" r="2"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="8" r="2"/><path d="M7 8v8M17 10a5 5 0 0 1-5 5H9a2 2 0 0 0-2 2"/>',
+  terminal: '<rect x="3.5" y="5" width="17" height="14" rx="2.5"/><path d="M7.5 10l2.5 2-2.5 2M12.5 14.5h4"/>',
+  doc: '<path d="M7.5 3.5h6L18 8v11a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 6 19V5a1.5 1.5 0 0 1 1.5-1.5z"/><path d="M13.5 3.5V8H18"/>',
+  search: '<circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/>',
+  clock: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
+  open: '<path d="M8 16L16 8M9.5 8H16v6.5"/>',
+  copy: '<rect x="8.5" y="8.5" width="11" height="11" rx="2"/><path d="M15.5 8.5V6a1.5 1.5 0 0 0-1.5-1.5H6A1.5 1.5 0 0 0 4.5 6v8A1.5 1.5 0 0 0 6 15.5h2.5"/>',
+  folder: '<path d="M3.5 7.5A1.5 1.5 0 0 1 5 6h4l2 2h8a1.5 1.5 0 0 1 1.5 1.5v8A1.5 1.5 0 0 1 19 19H5a1.5 1.5 0 0 1-1.5-1.5z"/>',
+};
+
+const $ = (s) => document.querySelector(s);
+const list = $("#list"), sentinel = $("#sentinel");
+const state = { q: "", source: null, range: "all", items: [], done: false, loading: false, token: 0, sel: -1, stats: {}, current: null };
+const meta = (src) => SOURCES[src] || { label: src, icon: "doc", tint: "var(--t-gray)" };
+
+// Every string becomes a text node, never HTML: titles come from arbitrary web pages.
+function h(tag, props = {}, ...kids) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) {
+    if (k === "class") el.className = v;
+    else if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+    else if (v != null && v !== false) el.setAttribute(k, v);
+  }
+  el.append(...kids.flat().filter((k) => k != null && k !== false));
+  return el;
+}
+function icon(name, size = 16) {
+  const s = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  for (const [k, v] of Object.entries({ viewBox: "0 0 24 24", width: size, height: size, "aria-hidden": "true" })) s.setAttribute(k, v);
+  s.innerHTML = ICONS[name]; // constants above only
+  return s;
+}
+const tile = (src, size) => h("span", { class: "tile", style: `--tint:${meta(src).tint};--size:${size}px` }, icon(meta(src).icon, Math.round(size * 0.58)));
+
+async function api(path, opts = {}) {
+  const r = await fetch(path, { ...opts, headers: { "X-Brain": "1" } });
+  if (!r.ok) throw new Error((await r.json()).error);
+  return r.json();
+}
+
+// --- time ---
+const iso = (d) => d.toISOString().slice(0, 19); // UTC, compares as a string against stored ts
+function bounds(range) {
+  const start = (n) => { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - n); return iso(d); };
+  return ({ today: { since: start(0) }, yesterday: { since: start(1), until: start(0) },
+            week: { since: start(6) }, month: { since: start(29) } })[range] || {};
+}
+const fmt = (o) => new Intl.DateTimeFormat(undefined, o);
+const timeF = fmt({ hour: "numeric", minute: "2-digit" }), dayF = fmt({ month: "short", day: "numeric" });
+const yearF = fmt({ month: "short", day: "numeric", year: "numeric" }), weekdayF = fmt({ weekday: "long" });
+const fullF = fmt({ dateStyle: "full", timeStyle: "short" });
+function dayLabel(d) {
+  const today = new Date().setHours(0, 0, 0, 0), diff = Math.round((today - new Date(d).setHours(0, 0, 0, 0)) / 864e5);
+  if (diff <= 0) return "Today";
+  if (diff === 1) return "Yesterday";
+  if (diff < 7) return weekdayF.format(d);
+  return (d.getFullYear() === new Date().getFullYear() ? dayF : yearF).format(d);
+}
+const shortWhen = (d) => (dayLabel(d) === "Today" ? timeF.format(d) : (d.getFullYear() === new Date().getFullYear() ? dayF : yearF).format(d));
+
+// "[project] text" titles carry their context in brackets; web visits use the host
+function parts(r) {
+  const m = /^\[([^\]]*)\] ?([\s\S]*)$/.exec(r.title || "");
+  let host = "";
+  try { if (/^https?:\/\//.test(r.url || "")) host = new URL(r.url).hostname.replace(/^www\./, ""); } catch {}
+  const who = r.kind === "prompt" ? "You" : r.kind === "reply" ? "Claude" : null;
+  return { title: (m ? m[2] : r.title) || r.url || "Untitled", context: [(m && m[1]) || host || meta(r.source).label, who].filter(Boolean).join(" · ") };
+}
+// Same title on the same host is the same page, whatever the scheme or tracking params
+const pageKey = (r) => r.source === "browser" && `${(r.url || "").split("/")[2]?.replace(/^www\./, "")} ${r.title}`;
+const parseRaw = (raw) => { try { return JSON.parse(raw) || {}; } catch { return {}; } };
+
+// --- sidebar & toolbar ---
+async function refreshStats() {
+  state.stats = await api("/api/stats");
+  renderSidebar();
+  updateCount();
+}
+function renderSidebar() {
+  const total = Object.values(state.stats).reduce((a, b) => a + b, 0);
+  const order = [...Object.keys(SOURCES).filter((s) => s in state.stats), ...Object.keys(state.stats).filter((s) => !(s in SOURCES))];
+  const item = (src, label, glyph, tint, n) => h("button", {
+    class: "side-item", "aria-current": state.source === src ? "true" : null,
+    onclick: () => { state.source = src; renderSidebar(); load(true); },
+  }, h("span", { class: "side-icon", style: tint && `--tint:${tint}` }, icon(glyph)), h("span", {}, label), h("span", { class: "n" }, (n || 0).toLocaleString()));
+  $("#sidebar").replaceChildren(
+    h("div", { class: "brand" }, icon("brain", 18), "Brain"),
+    h("div", { class: "side-label" }, "Library"),
+    item(null, "Everything", "tray", null, total),
+    h("div", { class: "side-label" }, "Sources"),
+    ...order.map((s) => item(s, meta(s).label, meta(s).icon, meta(s).tint, state.stats[s])),
+  );
+  $("#scope").textContent = state.source ? meta(state.source).label : "Everything";
+}
+function renderRanges() {
+  $("#ranges").replaceChildren(...RANGES.map(([k, label]) => h("button", {
+    role: "tab", "aria-selected": String(state.range === k),
+    onclick: () => { state.range = k; renderRanges(); load(true); },
+  }, label)));
+}
+function updateCount() {
+  const n = state.items.length;
+  if (state.q || state.range !== "all") {
+    $("#count").textContent = `${n.toLocaleString()}${state.done ? "" : "+"} ${state.q ? "results" : "items"}`;
+  } else {
+    const total = state.source ? state.stats[state.source] : Object.values(state.stats).reduce((a, b) => a + b, 0);
+    $("#count").textContent = `${(total ?? n).toLocaleString()} items`;
+  }
+}
+
+// --- list ---
+async function load(reset) {
+  if (reset) {
+    Object.assign(state, { items: [], fetched: 0, seen: new Set(), lastUrl: null, done: false, loading: false, sel: -1, token: state.token + 1, lastDay: null });
+    list.replaceChildren(sentinel);
+    list.scrollTop = 0;
+    showPreview(null);
+  }
+  if (state.done || state.loading) return;
+  const token = state.token;
+  state.loading = true;
+  const params = new URLSearchParams({ q: state.q, limit: PAGE, offset: state.fetched, ...bounds(state.range) });
+  if (state.source) params.set("source", state.source);
+  let rows = [];
+  try { rows = await api("/api/search?" + params); } catch (e) { console.error(e); }
+  if (token !== state.token) return; // a newer query replaced this one
+  Object.assign(state, { loading: false, done: rows.length < PAGE, fetched: state.fetched + rows.length });
+  // Repeat visits to one page: show it once when searching, collapse back-to-back repeats when browsing
+  rows = rows.filter((r) => {
+    const page = pageKey(r);
+    const dup = page && (state.q ? state.seen.has(page) : state.lastUrl === page);
+    state.lastUrl = page;
+    if (page) state.seen.add(page);
+    return !dup;
+  });
+  const start = state.items.length;
+  state.items.push(...rows);
+  const frag = document.createDocumentFragment();
+  rows.forEach((r, i) => {
+    const d = new Date(r.ts);
+    if (!state.q) { // browsing: group by day. Searching: flat, by relevance.
+      const day = dayLabel(d);
+      if (day !== state.lastDay) frag.append(h("div", { class: "group", role: "presentation" }, (state.lastDay = day)));
+    }
+    frag.append(row(r, start + i, d));
+  });
+  if (!state.items.length) frag.append(h("div", { class: "empty" }, icon("search", 32), h("p", {}, state.q ? `Nothing matches “${state.q}”` : "Nothing here yet")));
+  list.insertBefore(frag, sentinel);
+  updateCount();
+  // the observer only fires on changes: if collapsing left the sentinel on screen, keep going
+  if (!state.done && sentinel.getBoundingClientRect().top < list.getBoundingClientRect().bottom + 600) load(false);
+}
+function row(r, i, d) {
+  const p = parts(r);
+  return h("div", {
+    class: "row", role: "option", id: `r${i}`, "aria-selected": "false",
+    onclick: () => select(i),
+    ondblclick: async () => { await select(i); primary(); },
+  },
+    tile(r.source, 28),
+    h("div", {}, h("div", { class: "row-title" }, p.title), h("div", { class: "row-sub" }, p.context)),
+    h("time", { class: "row-time", datetime: r.ts }, state.q ? shortWhen(d) : timeF.format(d)));
+}
+async function select(i) {
+  if (i < 0 || i >= state.items.length) return;
+  list.querySelector('[aria-selected="true"]')?.setAttribute("aria-selected", "false");
+  const el = $("#r" + i);
+  el.setAttribute("aria-selected", "true");
+  el.scrollIntoView({ block: "nearest" });
+  list.setAttribute("aria-activedescendant", el.id);
+  state.sel = i;
+  await showPreview(state.items[i].id);
+}
+
+// --- preview ---
+let previewToken = 0;
+async function showPreview(id) {
+  const pane = $("#preview"), t = ++previewToken;
+  if (id == null) {
+    state.current = null;
+    return pane.replaceChildren(h("div", { class: "empty" }, icon("brain", 40), h("p", {}, "Select anything to see where it came from"), h("p", { class: "mono" }, "↑ ↓ move · ↵ open · / search")));
+  }
+  const it = await api("/api/item?id=" + id);
+  if (t !== previewToken) return;
+  state.current = it;
+  const p = parts(it), raw = parseRaw(it.raw);
+  const fact = (k, v) => v && [h("dt", {}, k), h("dd", {}, v)];
+  const showBody = it.source !== "browser" && it.body && it.body.trim() !== p.title.trim();
+  let pretty = it.raw;
+  try { pretty = JSON.stringify(JSON.parse(it.raw), null, 2); } catch {}
+  pane.replaceChildren(h("article", { class: "card-in" },
+    h("header", { class: "p-head" }, tile(it.source, 48), h("div", {}, h("h2", {}, p.title), h("p", { class: "p-sub" }, p.context))),
+    h("div", { class: "actions" }, actions(it, raw).map(([label, glyph, fn], k) =>
+      h("button", { class: k ? "btn" : "btn primary", onclick: (e) => fn(e.currentTarget) }, icon(glyph, 14), label))),
+    h("dl", { class: "facts" },
+      fact("Kind", KINDS[it.kind] || it.kind), fact("When", fullF.format(new Date(it.ts))),
+      fact("Source", meta(it.source).label), fact("Location", it.url)),
+    showBody && h("pre", { class: it.source === "zsh" ? "body mono" : "body" }, it.body),
+    h("section", { id: "around" }),
+    h("details", { class: "raw" }, h("summary", {}, "Source record"), h("pre", {}, pretty))));
+  around(it, t);
+}
+
+// What else was happening: the nearest items from every source within ±30 minutes
+async function around(it, t) {
+  const at = new Date(it.ts).getTime(), w = 30 * 60e3, now = iso(new Date(at));
+  const find = (p) => api("/api/search?" + new URLSearchParams(p)).then((r) => r.filter((x) => x.id !== it.id), () => []);
+  const lists = await Promise.all(Object.keys(state.stats).flatMap((source) => [
+    find({ source, since: iso(new Date(at - w)), until: now, limit: 2 }), // newest-first, so these are the nearest before
+    // ponytail: nearest after = tail of the newest-first list; assumes < 100 items per source in half an hour
+    find({ source, since: now, until: iso(new Date(at + w)), limit: 100 }).then((r) => r.slice(-2)),
+  ]));
+  if (t !== previewToken) return;
+  const gap = (r) => Math.abs(new Date(r.ts) - at);
+  const seen = new Set([pageKey(it)]);
+  const near = lists.flat().sort((a, b) => gap(a) - gap(b)).filter((r) => !pageKey(r) || !seen.has(pageKey(r)) && seen.add(pageKey(r)));
+  const rows = [...near.slice(0, 8), it].sort((a, b) => a.ts.localeCompare(b.ts));
+  if (rows.length < 2) return $("#around").remove();
+  $("#around").replaceChildren(
+    h("h3", { class: "section-label" }, icon("clock", 13), "Around this time"),
+    ...rows.map((r) => h("button", { class: r.id === it.id ? "mini current" : "mini", onclick: () => r.id !== it.id && showPreview(r.id) },
+      tile(r.source, 20), h("span", { class: "mini-title" }, parts(r).title), h("time", {}, timeF.format(new Date(r.ts))))));
+}
+
+function actions(it, raw) {
+  const out = [], web = /^https?:\/\//.test(it.url || "");
+  const shq = (s) => "'" + s.replace(/'/g, "'\\''") + "'";
+  if (web) out.push([it.source === "git" ? "Open on GitHub" : "Open page", "open", () => window.open(it.url, "_blank", "noopener")]);
+  if (it.source === "claude-code" && raw.sessionId)
+    out.push(["Copy resume command", "copy", (b) => copy(b, (raw.cwd ? `cd ${shq(raw.cwd)} && ` : "") + `claude --resume ${raw.sessionId}`)]);
+  if (it.source === "zsh") out.push(["Copy command", "copy", (b) => copy(b, it.body)]);
+  if ((it.url || "").startsWith("file:")) out.push(["Reveal in Finder", "folder", () => api("/api/reveal?id=" + it.id, { method: "POST" })]);
+  if (web) out.push(["Copy link", "copy", (b) => copy(b, it.url)]);
+  return out;
+}
+function primary() {
+  if (!state.current) return;
+  const [first] = actions(state.current, parseRaw(state.current.raw));
+  first?.[2]($(".actions .primary"));
+}
+async function copy(btn, text) {
+  await navigator.clipboard.writeText(text);
+  const label = btn?.lastChild;
+  if (!label || label.textContent === "Copied") return;
+  const old = label.textContent;
+  label.textContent = "Copied";
+  setTimeout(() => (label.textContent = old), 1200);
+}
+
+// --- keys & wiring ---
+const q = $("#q");
+$("#search-box").prepend(icon("search", 14));
+let debounce;
+q.addEventListener("input", () => {
+  clearTimeout(debounce);
+  debounce = setTimeout(() => { state.q = q.value.trim(); load(true); }, 140);
+});
+document.addEventListener("keydown", (e) => {
+  const inSearch = document.activeElement === q;
+  if (((e.metaKey || e.ctrlKey) && e.key === "f") || (e.key === "/" && !inSearch)) {
+    e.preventDefault(); q.focus(); q.select();
+  } else if (e.key === "Escape" && inSearch) {
+    if (q.value) { q.value = ""; state.q = ""; load(true); } else q.blur();
+  } else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+    e.preventDefault();
+    select(Math.max(0, Math.min(state.items.length - 1, state.sel + (e.key === "ArrowDown" ? 1 : -1))));
+    if (inSearch) list.focus();
+  } else if (e.key === "Enter" && state.current && !(document.activeElement instanceof HTMLButtonElement)) {
+    e.preventDefault(); primary();
+  }
+});
+new IntersectionObserver((es) => es[0].isIntersecting && load(false), { root: list, rootMargin: "600px" }).observe(sentinel);
+window.addEventListener("focus", refreshStats); // pick up what the 15-minute sync added
+
+renderRanges();
+refreshStats().then(() => load(true));
+</script>
+</body>
+</html>

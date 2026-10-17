@@ -1,0 +1,19 @@
+// Checks for the parked Dock and widgets; they went inside selfCheck() in Check.swift.
+    // Docks: the macOS Dock's layout is read (never written here), and Den's Dock items survive a save
+    let layout = try! PropertyListSerialization.data(fromPropertyList: ["persistent-apps": [["tile-data": ["file-data": ["_CFURLString": "file:///Applications/Safari.app/"]]]]],
+                                                     format: .binary, options: 0)
+    precondition(AppleDock.apps(in: layout) == ["/Applications/Safari.app"], "dock layout")
+    precondition(AppleDock.current().map { !AppleDock.apps(in: $0).isEmpty } ?? false, "reading the macOS Dock")
+    let things: [DockThing] = [.app("/Applications/Safari.app"), .widget(WidgetConfig(kind: .clock, options: ["zones": "Europe/London"])), .spacer(UUID()), .link("https://example.com")]
+    precondition(try! JSONDecoder().decode([DockThing].self, from: JSONEncoder().encode(things)) == things && things[3].title == "example.com", "dock items")
+    // Den's Dock starts the size of the macOS Dock; full-screen detection runs without permissions
+    precondition(DockLook.likeAppleDock().icon == (AppleDock.value("tilesize") as? Double ?? 48), "dock size")
+    _ = DockController.isFullScreen()
+    _ = WindowIndex.read(NSWorkspace.shared.runningApplications.prefix(5).map { ($0.processIdentifier, $0.localizedName ?? "") }) // never hangs: 0.25 s a call
+    // Widgets: readings that need two samples, and the weather's symbols
+    _ = Meters.shared.cpu(); _ = Meters.shared.network()
+    RunLoop.main.run(until: .now + 0.7)
+    let cpu = Meters.shared.cpu(), net = Meters.shared.network()
+    precondition(cpu >= 0 && cpu <= 1 && net.down >= 0 && net.up >= 0, "meters")
+    precondition(WeatherWidget.symbol(0) == "sun.max.fill" && WeatherWidget.symbol(63) == "cloud.rain.fill", "weather symbols")
+    precondition(Widget.allCases.allSatisfy { !$0.title.isEmpty } && Widget.hydration.defaults["last"] != nil, "widget defaults")
