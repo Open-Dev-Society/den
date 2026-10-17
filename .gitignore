@@ -5,3 +5,4 @@ app/Den.app/
 app/Icon/Den.iconset/
 .claude/
 __pycache__/
+app/dist/
